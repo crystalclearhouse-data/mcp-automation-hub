@@ -51,9 +51,10 @@ export class MCPTrigger implements INodeType {
 
   async execute(this: IExecuteFunctions): Promise<INodeExecutionData[][]> {
     const items = this.getInputData();
-    const eventType = this.getNodeParameter('eventType', 0) as string;
-    const filter = this.getNodeParameter('filter', 0) as string;
-
+    // In production, process eventType and filter parameters
+    // const eventType = this.getNodeParameter('eventType', 0) as string;
+    // const filter = this.getNodeParameter('filter', 0) as string;
+    
     // Process trigger logic
     return [items];
   }

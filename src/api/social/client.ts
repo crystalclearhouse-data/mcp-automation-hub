@@ -1,4 +1,3 @@
-import axios from 'axios';
 import { env } from '../../utils/env.js';
 import { logger } from '../../utils/logger.js';
 
