@@ -85,12 +85,19 @@ A comprehensive TypeScript-based MCP (Model Context Protocol) automation hub wit
 - **Runtime**: Node.js 20+
 - **Language**: TypeScript 5.9+
 - **Package Manager**: pnpm 8.15.0
-- **MCP SDK**: @modelcontextprotocol/sdk 0.5.0
+- **MCP SDK**: @modelcontextprotocol/sdk 1.26.0 🔒 (security patched)
 - **Testing**: Vitest 1.6.1
 - **Linting**: ESLint 8.57 + TypeScript ESLint
 - **Formatting**: Prettier 3.8
 - **Logging**: Winston 3.19
 - **Validation**: Zod 3.25
+
+## Security
+
+✅ **All dependencies scanned and secure**
+- MCP SDK updated to v1.26.0 (patches ReDoS and DNS rebinding vulnerabilities)
+- No known vulnerabilities in npm dependencies
+- Regular security updates recommended
 
 ## Validation Results
 
