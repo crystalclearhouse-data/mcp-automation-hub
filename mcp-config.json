@@ -1,0 +1,12 @@
+{
+  \"mcpServers\": {
+    \"automation-hub\": {
+      \"command\": \"node\",
+      \"args\": [\"/Users/YOUR_USER/mcp-automation-hub/dist/mcp-server/index.js\"],
+      \"env\": {
+        \"NODE_ENV\": \"production\",
+        \"MCP_SERVER_NAME\": \"automation-hub\"
+      }
+    }
+  }
+}
