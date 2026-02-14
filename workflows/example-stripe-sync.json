@@ -1,0 +1,46 @@
+{
+  "name": "MCP Stripe to Supabase Sync",
+  "nodes": [
+    {
+      "parameters": {
+        "eventType": "stripe",
+        "filter": "{\"type\": \"customer.created\"}"
+      },
+      "name": "MCP Trigger",
+      "type": "mcpTrigger",
+      "typeVersion": 1,
+      "position": [250, 300]
+    },
+    {
+      "parameters": {
+        "action": "stripe_list_customers",
+        "parameters": "{\"limit\": 10}"
+      },
+      "name": "Get Stripe Customers",
+      "type": "mcpAction",
+      "typeVersion": 1,
+      "position": [450, 300]
+    },
+    {
+      "parameters": {
+        "action": "supabase_insert",
+        "parameters": "{\"table\": \"customers\", \"data\": \"{{$json}}\"}"
+      },
+      "name": "Insert to Supabase",
+      "type": "mcpAction",
+      "typeVersion": 1,
+      "position": [650, 300]
+    }
+  ],
+  "connections": {
+    "MCP Trigger": {
+      "main": [[{"node": "Get Stripe Customers", "type": "main", "index": 0}]]
+    },
+    "Get Stripe Customers": {
+      "main": [[{"node": "Insert to Supabase", "type": "main", "index": 0}]]
+    }
+  },
+  "active": true,
+  "settings": {},
+  "id": "1"
+}
