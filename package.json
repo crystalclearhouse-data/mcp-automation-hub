@@ -1,0 +1,58 @@
+{
+  "name": "@crystalclearhouse/mcp-automation-hub",
+  "version": "1.0.0",
+  "description": "Central MCP (Model Context Protocol) automation hub with CLI/SDK integration for n8n workflows, API orchestration, and tight service bindings",
+  "main": "dist/index.js",
+  "type": "module",
+  "packageManager": "pnpm@8.15.0",
+  "engines": {
+    "node": ">=20.0.0"
+  },
+  "scripts": {
+    "dev": "tsx watch src/mcp-server/index.ts",
+    "build": "tsc",
+    "start": "node dist/mcp-server/index.js",
+    "lint": "eslint src --ext .ts",
+    "lint:fix": "eslint src --ext .ts --fix",
+    "format": "prettier --write \"src/**/*.ts\"",
+    "test": "vitest run",
+    "test:watch": "vitest watch",
+    "type-check": "tsc --noEmit",
+    "docker:up": "docker-compose up -d",
+    "docker:down": "docker-compose down",
+    "docker:logs": "docker-compose logs -f",
+    "n8n:install": "node scripts/install-n8n-nodes.js",
+    "prepare": "node scripts/prepare.js"
+  },
+  "keywords": [
+    "mcp",
+    "model-context-protocol",
+    "n8n",
+    "automation",
+    "workflow",
+    "api-orchestration"
+  ],
+  "author": "Crystal Clear House",
+  "license": "MIT",
+  "dependencies": {
+    "@modelcontextprotocol/sdk": "^0.5.0",
+    "stripe": "^14.17.0",
+    "dotenv": "^16.4.1",
+    "winston": "^3.11.0",
+    "zod": "^3.22.4",
+    "@supabase/supabase-js": "^2.39.3",
+    "axios": "^1.6.7"
+  },
+  "devDependencies": {
+    "@types/node": "^20.11.16",
+    "typescript": "^5.3.3",
+    "tsx": "^4.7.1",
+    "eslint": "^8.56.0",
+    "@typescript-eslint/eslint-plugin": "^6.20.0",
+    "@typescript-eslint/parser": "^6.20.0",
+    "prettier": "^3.2.5",
+    "vitest": "^1.2.2",
+    "n8n-workflow": "^1.26.0",
+    "n8n-core": "^1.26.0"
+  }
+}
