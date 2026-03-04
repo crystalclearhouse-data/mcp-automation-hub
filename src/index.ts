@@ -8,16 +8,7 @@
  * handles the main server lifecycle.
  */
 
-import { Server } from '@modelcontextprotocol/sdk/server/index.js';
 import { StdioServerTransport } from '@modelcontextprotocol/sdk/server/stdio.js';
-import {
-  CallToolRequestSchema,
-  ListToolsRequestSchema,
-  ListResourcesRequestSchema,
-  ReadResourceRequestSchema,
-  ListPromptsRequestSchema,
-  GetPromptRequestSchema,
-} from '@modelcontextprotocol/sdk/types.js';
 
 import { createServer } from './server.js';
 import { registerTools } from './tools/index.js';
@@ -34,19 +25,7 @@ async function main() {
     logger.info('Starting MCP Automation Hub...');
 
     // Create MCP server instance
-    const server = new Server(
-      {
-        name: 'mcp-automation-hub',
-        version: '0.1.0',
-      },
-      {
-        capabilities: {
-          tools: {},
-          resources: {},
-          prompts: {},
-        },
-      }
-    );
+    const server = createServer();
 
     // Register all tools
     registerTools(server);
