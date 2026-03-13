@@ -1,0 +1,48 @@
+{
+  "name": "MCP Automation Hub",
+  "dockerComposeFile": "../docker-compose.yml",
+  "service": "mcp",
+  "workspaceFolder": "/workspace",
+
+  // VS Code extensions auto-installed inside the container
+  "customizations": {
+    "vscode": {
+      "extensions": [
+        "dbaeumer.vscode-eslint",
+        "esbenp.prettier-vscode",
+        "eamodio.gitlens",
+        "mhutchie.git-graph",
+        "ms-vscode.vscode-typescript-next",
+        "christian-kohler.npm-intellisense",
+        "mikestead.dotenv",
+        "streetsidesoftware.code-spell-checker",
+        "rangav.vscode-thunder-client"
+      ],
+      "settings": {
+        "editor.formatOnSave": true,
+        "editor.defaultFormatter": "esbenp.prettier-vscode",
+        "editor.tabSize": 2,
+        "typescript.tsdk": "/workspace/node_modules/typescript/lib",
+        "terminal.integrated.defaultProfile.linux": "bash"
+      }
+    }
+  },
+
+  // Forward ports so you can hit them from your Mac browser
+  "forwardPorts": [3000, 5678],
+  "portsAttributes": {
+    "3000": { "label": "MCP Server" },
+    "5678": { "label": "n8n UI" }
+  },
+
+  // Run after the container starts
+  "postCreateCommand": "pnpm install",
+  "postStartCommand": "echo '✓ MCP Automation Hub dev container ready'",
+
+  // Mount your local .env so secrets never go in the image
+  "mounts": [
+    "source=${localWorkspaceFolder}/.env,target=/workspace/.env,type=bind,consistency=cached"
+  ],
+
+  "remoteUser": "node"
+}
