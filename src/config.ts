@@ -20,11 +20,13 @@ export const config = {
     port: parseInt(process.env.N8N_PORT || '5678', 10),
     protocol: process.env.N8N_PROTOCOL || 'http',
     webhookUrl: process.env.N8N_WEBHOOK_URL || 'http://localhost:5678/webhook',
+    stripeWebhookUrl: process.env.N8N_STRIPE_WEBHOOK_URL || '',
   },
 
   supabase: {
     url: process.env.SUPABASE_URL || '',
     anonKey: process.env.SUPABASE_ANON_KEY || '',
+    serviceRoleKey: process.env.SUPABASE_SERVICE_ROLE_KEY || '',
   },
 
   stripe: {

@@ -23,6 +23,7 @@ import { createServer } from './server.js';
 import { registerTools } from './tools/index.js';
 import { registerResources } from './resources/index.js';
 import { registerPrompts } from './prompts/index.js';
+import { startHttpServer } from './http-server.js';
 import { config } from './config.js';
 import { logger } from './utils/logger.js';
 
@@ -59,6 +60,9 @@ async function main() {
     // Register all prompts
     registerPrompts(server);
     logger.info('Prompts registered successfully');
+
+    // Start HTTP server for webhooks (Stripe, etc.)
+    startHttpServer();
 
     // Create transport layer (stdio for CLI integration)
     const transport = new StdioServerTransport();
