@@ -543,7 +543,8 @@ export function dashboardHTML(n8nUrl: string): string {
     } catch (err) {
       document.getElementById('n8n-dot').className = 'dot red';
       document.getElementById('n8n-label').textContent = 'error';
-      toast('Load failed: ' + err.message, true);
+      renderCurrentView(); // always render so screen is never blank
+      toast('n8n unreachable: ' + err.message, true);
     }
   }
 
@@ -566,7 +567,7 @@ export function dashboardHTML(n8nUrl: string): string {
   function renderWorkflows() {
     const el = document.getElementById('content');
     if (!allWorkflows.length) {
-      el.innerHTML = '<div class="empty">No workflows found in n8n.</div>';
+      el.innerHTML = '<div class="empty">No workflows yet — or n8n is unreachable. Check the connection dot above.</div>';
       return;
     }
 
