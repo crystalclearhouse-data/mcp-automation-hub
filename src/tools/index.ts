@@ -337,6 +337,31 @@ export function registerTools(server: Server): void {
         return { content: [{ type: 'text', text: JSON.stringify(results, null, 2) }] };
       }
 
+      // ── AI / Claude handlers ───────────────────────────────────────────────
+      case 'ai_classify_sms': {
+        const result = await classifyIncomingSMS(
+          args['from_number'] as string,
+          args['message'] as string
+        );
+        return { content: [{ type: 'text', text: JSON.stringify(result, null, 2) }] };
+      }
+
+      case 'ai_generate_call_script': {
+        const script = await generateCallScript(
+          args['purpose'] as string,
+          args['customer_name'] as string | undefined
+        );
+        return { content: [{ type: 'text', text: script }] };
+      }
+
+      case 'ai_answer': {
+        const answer = await answerQuestion(
+          args['question'] as string,
+          (args['context'] as string) ?? ''
+        );
+        return { content: [{ type: 'text', text: answer }] };
+      }
+
       default:
         throw new Error(`Unknown tool: ${name}`);
     }

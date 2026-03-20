@@ -14,6 +14,12 @@ import {
   triggerWebhookWorkflow,
   listExecutions,
 } from './services/n8n.js';
+import {
+  getBillingOverview,
+  getChurnRisk,
+  getRevenueByDay,
+  getTopCustomers,
+} from './services/supabaseBilling.js';
 
 export function startHttpServer(): void {
   const app = express();
@@ -103,6 +109,42 @@ export function startHttpServer(): void {
     const workflowId = req.query['workflowId'] as string | undefined;
     try { res.json(await listExecutions(workflowId, limit)); }
     catch (e) { res.status(500).json({ error: String(e) }); }
+  });
+
+  // ── Revenue API ───────────────────────────────────────────────────────────
+  app.get('/api/revenue/mrr', async (_req, res) => {
+    try {
+      const [overview, churnRisk, topCustomers] = await Promise.all([
+        getBillingOverview(),
+        getChurnRisk(),
+        getTopCustomers(5),
+      ]);
+      res.json({
+        activeSubscriptions: overview.activeSubscriptions,
+        totalRevenueCents: overview.totalRevenueCents,
+        churnRiskCount: churnRisk.length,
+        topCustomers,
+      });
+    } catch (e) {
+      res.status(500).json({ error: String(e) });
+    }
+  });
+
+  app.get('/api/revenue/churn', async (_req, res) => {
+    try {
+      res.json(await getChurnRisk());
+    } catch (e) {
+      res.status(500).json({ error: String(e) });
+    }
+  });
+
+  app.get('/api/revenue/daily', async (req, res) => {
+    const days = parseInt(String(req.query['days'] ?? '30'), 10);
+    try {
+      res.json(await getRevenueByDay(days));
+    } catch (e) {
+      res.status(500).json({ error: String(e) });
+    }
   });
 
   // ── POST /api/push/notify — Server-side push payload trigger ─────────────

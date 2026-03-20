@@ -456,6 +456,9 @@ export function dashboardHTML(n8nUrl: string): string {
     <div class="nav-item" onclick="showView('trigger')" id="nav-trigger">
       <span class="icon">⚡</span> Trigger
     </div>
+    <div class="nav-item" onclick="showView('revenue')" id="nav-revenue">
+      <span class="icon">$</span> Revenue
+    </div>
 
     <div class="sidebar-label">Services</div>
     <div class="nav-item" id="svc-n8n">
@@ -609,7 +612,7 @@ export function dashboardHTML(n8nUrl: string): string {
   // ── Views ─────────────────────────────────────────────────────────────────
   function showView(view) {
     currentView = view;
-    ['workflows','executions','trigger'].forEach(v => {
+    ['workflows','executions','trigger','revenue'].forEach(v => {
       document.getElementById('nav-' + v)?.classList.toggle('active', v === view);
     });
     renderCurrentView();
@@ -619,6 +622,7 @@ export function dashboardHTML(n8nUrl: string): string {
     if (currentView === 'workflows')  renderWorkflows();
     else if (currentView === 'executions') renderExecutions();
     else if (currentView === 'trigger') renderTrigger();
+    else if (currentView === 'revenue') renderRevenue();
   }
 
   // ── Workflows ─────────────────────────────────────────────────────────────
@@ -731,6 +735,57 @@ export function dashboardHTML(n8nUrl: string): string {
         </div>
       </div>
     \`;
+  }
+
+  // ── Revenue ───────────────────────────────────────────────────────────────
+  async function renderRevenue() {
+    const el = document.getElementById('content');
+    el.innerHTML = '<div class="loading">Loading revenue data</div>';
+    try {
+      const data = await api('/api/revenue/mrr');
+      const churnCount = data.churnRiskCount ?? 0;
+      el.innerHTML = \`
+        <div class="panel">
+          <div class="panel-header">
+            <span class="panel-title">Revenue Overview</span>
+            <button class="panel-action" onclick="renderRevenue()">↻ refresh</button>
+          </div>
+          <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:12px;padding:16px;">
+            <div class="stat-card">
+              <div class="stat-label">MRR</div>
+              <div class="stat-value" style="color:var(--green)">\${esc(data.mrr ?? '—')}</div>
+              <div class="stat-sub">monthly recurring</div>
+            </div>
+            <div class="stat-card">
+              <div class="stat-label">ARR</div>
+              <div class="stat-value" style="color:var(--accent)">\${esc(data.arr ?? '—')}</div>
+              <div class="stat-sub">annual run rate</div>
+            </div>
+            <div class="stat-card">
+              <div class="stat-label">Churn Risk</div>
+              <div class="stat-value" style="color:\${churnCount > 0 ? 'var(--red)' : 'var(--green)'}">\${churnCount}</div>
+              <div class="stat-sub">at-risk subscriptions</div>
+            </div>
+          </div>
+        </div>
+        \${data.topCustomers && data.topCustomers.length ? \`
+        <div class="panel">
+          <div class="panel-header">
+            <span class="panel-title">Top Customers</span>
+          </div>
+          \${data.topCustomers.map(c => \`
+            <div class="workflow-row">
+              <div class="wf-name">\${esc(c.email || c.stripe_customer_id)}</div>
+              <div class="wf-id">\${esc(c.stripe_customer_id)}</div>
+              <div class="wf-tag">$\${((c.total_amount ?? 0) / 100).toFixed(2)}</div>
+            </div>
+          \`).join('')}
+        </div>
+        \` : ''}
+      \`;
+    } catch (err) {
+      el.innerHTML = \`<div class="empty">Failed to load revenue data: \${esc(err.message)}</div>\`;
+    }
   }
 
   // ── Actions ───────────────────────────────────────────────────────────────

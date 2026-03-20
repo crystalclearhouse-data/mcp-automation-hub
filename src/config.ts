@@ -37,6 +37,7 @@ export const config = {
     secretKey: process.env.STRIPE_SECRET_KEY || '',
     publishableKey: process.env.STRIPE_PUBLISHABLE_KEY || '',
     webhookSecret: process.env.STRIPE_WEBHOOK_SECRET || '',
+    defaultPriceId: process.env.STRIPE_DEFAULT_PRICE_ID || 'price_placeholder',
   },
 
   twilio: {
