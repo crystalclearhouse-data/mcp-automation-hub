@@ -18,6 +18,7 @@ import {
   pingN8n,
 } from '../services/n8n.js';
 import { sendSMS, makeCall } from '../services/twilio.js';
+import { classifyIncomingSMS, generateCallScript, answerQuestion } from '../services/aiAgent.js';
 
 const BILLING_TOOL_NAMES = new Set(BILLING_TOOL_DEFINITIONS.map(t => t.name));
 
@@ -172,6 +173,43 @@ export function registerTools(server: Server): void {
             message: { type: 'string', description: 'SMS message body to send to all recipients' },
           },
           required: ['numbers', 'message'],
+        },
+      },
+      // ── AI / Claude tools ─────────────────────────────────────────────────
+      {
+        name: 'ai_classify_sms',
+        description: 'Use Claude AI to classify an incoming SMS message intent and draft a short reply. Returns intent, reply, and optional action.',
+        inputSchema: {
+          type: 'object',
+          properties: {
+            from_number: { type: 'string', description: 'Sender phone number in E.164 format' },
+            message: { type: 'string', description: 'Incoming SMS message body' },
+          },
+          required: ['from_number', 'message'],
+        },
+      },
+      {
+        name: 'ai_generate_call_script',
+        description: 'Use Claude AI to generate a short TwiML-ready call script for a given purpose.',
+        inputSchema: {
+          type: 'object',
+          properties: {
+            purpose: { type: 'string', description: 'Purpose or topic of the phone call' },
+            customer_name: { type: 'string', description: 'Optional customer name to personalise the script' },
+          },
+          required: ['purpose'],
+        },
+      },
+      {
+        name: 'ai_answer',
+        description: 'Use Claude AI to answer a question given optional context from the automation hub.',
+        inputSchema: {
+          type: 'object',
+          properties: {
+            question: { type: 'string', description: 'The question to answer' },
+            context: { type: 'string', description: 'Optional context to inform the answer' },
+          },
+          required: ['question'],
         },
       },
     ],
