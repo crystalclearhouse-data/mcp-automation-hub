@@ -601,6 +601,13 @@ export function dashboardHTML(n8nUrl: string): string {
       document.getElementById('exec-count').textContent = execs.length;
       document.getElementById('svc-n8n-badge').textContent = ping.ok ? 'live' : 'err';
 
+      // Revenue badge — best-effort, don't fail the whole refresh
+      try {
+        const mrr = await api('/api/revenue/mrr');
+        const badge = document.getElementById('rev-badge');
+        if (badge) badge.textContent = String(mrr.activeSubscriptions ?? '$');
+      } catch (_) { /* Supabase may not be configured */ }
+
       renderCurrentView();
     } catch (err) {
       document.getElementById('n8n-dot').className = 'dot red';
@@ -744,6 +751,8 @@ export function dashboardHTML(n8nUrl: string): string {
     el.innerHTML = '<div class="loading">Loading revenue data</div>';
     try {
       const data = await api('/api/revenue/mrr');
+      const activeSubs = data.activeSubscriptions ?? 0;
+      const totalRevenue = ((data.totalRevenueCents ?? 0) / 100).toFixed(2);
       const churnCount = data.churnRiskCount ?? 0;
       el.innerHTML = \`
         <div class="panel">
@@ -753,14 +762,14 @@ export function dashboardHTML(n8nUrl: string): string {
           </div>
           <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:12px;padding:16px;">
             <div class="stat-card">
-              <div class="stat-label">MRR</div>
-              <div class="stat-value" style="color:var(--green)">\${esc(data.mrr ?? '—')}</div>
-              <div class="stat-sub">monthly recurring</div>
+              <div class="stat-label">Active Subs</div>
+              <div class="stat-value" style="color:var(--green)">\${activeSubs}</div>
+              <div class="stat-sub">active subscriptions</div>
             </div>
             <div class="stat-card">
-              <div class="stat-label">ARR</div>
-              <div class="stat-value" style="color:var(--accent)">\${esc(data.arr ?? '—')}</div>
-              <div class="stat-sub">annual run rate</div>
+              <div class="stat-label">Total Revenue</div>
+              <div class="stat-value" style="color:var(--accent)">$\${totalRevenue}</div>
+              <div class="stat-sub">all time succeeded</div>
             </div>
             <div class="stat-card">
               <div class="stat-label">Churn Risk</div>
@@ -785,7 +794,7 @@ export function dashboardHTML(n8nUrl: string): string {
         \` : ''}
       \`;
     } catch (err) {
-      el.innerHTML = \`<div class="empty">Failed to load revenue data: \${esc(err.message)}</div>\`;
+      el.innerHTML = '<div class="empty">Revenue data unavailable — check Supabase config.</div>';
     }
   }
 
