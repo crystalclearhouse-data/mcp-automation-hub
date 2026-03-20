@@ -20,6 +20,7 @@ import {
   getRevenueByDay,
   getTopCustomers,
 } from './services/supabaseBilling.js';
+import { calculateMRR } from './services/revenueEngine.js';
 
 export function startHttpServer(): void {
   const app = express();
@@ -117,9 +118,21 @@ export function startHttpServer(): void {
       const [overview, churnRisk, topCustomers] = await Promise.all([
         getBillingOverview(),
         getChurnRisk(),
-        getTopCustomers(5),
+        getTopCustomers(10),
       ]);
+      // Derive MRR from active subscription count × average payment
+      const avgPayment =
+        overview.activeSubscriptions > 0
+          ? Math.round(overview.totalRevenueCents / Math.max(overview.totalPaymentsSucceeded, 1))
+          : 0;
+      const syntheticSubs = Array.from({ length: overview.activeSubscriptions }, () => ({
+        amount: avgPayment,
+        status: 'active' as const,
+      }));
+      const mrrData = calculateMRR(syntheticSubs);
       res.json({
+        mrr: mrrData.mrrFormatted,
+        arr: mrrData.arrFormatted,
         activeSubscriptions: overview.activeSubscriptions,
         totalRevenueCents: overview.totalRevenueCents,
         churnRiskCount: churnRisk.length,

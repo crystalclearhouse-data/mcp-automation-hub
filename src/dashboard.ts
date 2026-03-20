@@ -458,6 +458,7 @@ export function dashboardHTML(n8nUrl: string): string {
     </div>
     <div class="nav-item" onclick="showView('revenue')" id="nav-revenue">
       <span class="icon">$</span> Revenue
+      <span class="badge" id="rev-badge">$</span>
     </div>
 
     <div class="sidebar-label">Services</div>
