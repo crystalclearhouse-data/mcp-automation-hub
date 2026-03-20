@@ -6,6 +6,19 @@ import { generateStripePaymentLink, buildUpsellMessage } from '../services/reven
 import { sendSMS, type TwilioBlastResult } from '../services/twilio.js';
 import { config } from '../config.js';
 
+/** Fire-and-forget: forward SMS event to n8n Wave 3 workflow */
+function forwardToN8n(payload: Record<string, unknown>): void {
+  const n8nUrl = `${config.n8n.webhookBaseUrl}/sms-event`;
+  fetch(n8nUrl, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ body: payload }),
+    signal: AbortSignal.timeout(8_000),
+  }).catch((err: unknown) => {
+    logger.warn(`n8n forward failed (non-fatal): ${err instanceof Error ? err.message : String(err)}`);
+  });
+}
+
 const router: ExpressRouter = Router();
 
 /** Wrap text in a TwiML <Response><Message> envelope. */
@@ -59,8 +72,10 @@ router.post('/sms', async (req: Request, res: Response): Promise<void> => {
     action = null;
   }
 
-  // Broadcast SSE event
-  broadcastSSEEvent('sms_pipeline', { from, intent, action, reply });
+  // Broadcast SSE event + forward to n8n Wave 3 workflow
+  const eventPayload = { from, intent, action, reply };
+  broadcastSSEEvent('sms_pipeline', eventPayload);
+  forwardToN8n(eventPayload);
 
   // Respond with TwiML
   res.setHeader('Content-Type', 'text/xml');

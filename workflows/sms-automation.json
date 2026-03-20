@@ -1,0 +1,120 @@
+{
+  "name": "SMS Automation — Wave 3",
+  "nodes": [
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "sms-event",
+        "responseMode": "responseNode",
+        "options": {}
+      },
+      "id": "webhook-trigger",
+      "name": "SMS Event Webhook",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2,
+      "position": [240, 300],
+      "webhookId": "sms-event"
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": { "caseSensitive": true, "leftValue": "", "typeValidation": "strict" },
+          "conditions": [
+            {
+              "id": "payment-check",
+              "leftValue": "={{ $json.body.intent }}",
+              "rightValue": "payment",
+              "operator": { "type": "string", "operation": "equals" }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "id": "route-by-intent",
+      "name": "Route by Intent",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2,
+      "position": [480, 300]
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            { "id": "1", "name": "event", "value": "payment_intent", "type": "string" },
+            { "id": "2", "name": "from", "value": "={{ $json.body.from }}", "type": "string" },
+            { "id": "3", "name": "action", "value": "={{ $json.body.action }}", "type": "string" },
+            { "id": "4", "name": "reply", "value": "={{ $json.body.reply }}", "type": "string" },
+            { "id": "5", "name": "timestamp", "value": "={{ $now }}", "type": "string" }
+          ]
+        },
+        "options": {}
+      },
+      "id": "map-payment",
+      "name": "Map Payment Event",
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [720, 180]
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            { "id": "1", "name": "event", "value": "={{ $json.body.intent }}_sms", "type": "string" },
+            { "id": "2", "name": "from", "value": "={{ $json.body.from }}", "type": "string" },
+            { "id": "3", "name": "intent", "value": "={{ $json.body.intent }}", "type": "string" },
+            { "id": "4", "name": "reply", "value": "={{ $json.body.reply }}", "type": "string" },
+            { "id": "5", "name": "timestamp", "value": "={{ $now }}", "type": "string" }
+          ]
+        },
+        "options": {}
+      },
+      "id": "map-general",
+      "name": "Map General Event",
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [720, 420]
+    },
+    {
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={ \"ok\": true }",
+        "options": {}
+      },
+      "id": "respond-ok",
+      "name": "Respond OK",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.1,
+      "position": [960, 300]
+    }
+  ],
+  "connections": {
+    "SMS Event Webhook": {
+      "main": [[{ "node": "Route by Intent", "type": "main", "index": 0 }]]
+    },
+    "Route by Intent": {
+      "main": [
+        [{ "node": "Map Payment Event", "type": "main", "index": 0 }],
+        [{ "node": "Map General Event", "type": "main", "index": 0 }]
+      ]
+    },
+    "Map Payment Event": {
+      "main": [[{ "node": "Respond OK", "type": "main", "index": 0 }]]
+    },
+    "Map General Event": {
+      "main": [[{ "node": "Respond OK", "type": "main", "index": 0 }]]
+    }
+  },
+  "pinData": {},
+  "settings": {
+    "executionOrder": "v1",
+    "saveManualExecutions": true,
+    "callerPolicy": "workflowsFromSameOwner",
+    "errorWorkflow": ""
+  },
+  "staticData": null,
+  "tags": ["sms", "automation", "wave3"],
+  "triggerCount": 0,
+  "updatedAt": "2026-03-20T00:00:00.000Z",
+  "versionId": "wave3-v1"
+}
