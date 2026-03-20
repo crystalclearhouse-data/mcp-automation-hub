@@ -1,9 +1,18 @@
-import { createClient } from '@supabase/supabase-js';
+import { createClient, SupabaseClient } from '@supabase/supabase-js';
 import { config } from '../config.js';
 import { logger } from '../utils/logger.js';
 
-// Uses service role key — full DB access, never expose to clients
-const supabase = createClient(config.supabase.url, config.supabase.serviceRoleKey);
+// Lazy singleton — avoids crash on startup when SUPABASE_URL is not yet set
+let _client: SupabaseClient | null = null;
+function db(): SupabaseClient {
+  if (!_client) {
+    if (!config.supabase.url || !config.supabase.serviceRoleKey) {
+      throw new Error('SUPABASE_URL and SUPABASE_SERVICE_ROLE_KEY must be set');
+    }
+    _client = createClient(config.supabase.url, config.supabase.serviceRoleKey);
+  }
+  return _client;
+}
 
 export interface StripeCustomerData {
   stripe_customer_id: string;
@@ -32,7 +41,7 @@ export interface StripePaymentData {
 }
 
 export async function upsertStripeCustomer(data: StripeCustomerData): Promise<void> {
-  const { error } = await supabase
+  const { error } = await db()
     .from('stripe_customers')
     .upsert({ ...data, updated_at: new Date().toISOString() }, { onConflict: 'stripe_customer_id' });
 
@@ -44,7 +53,7 @@ export async function upsertStripeCustomer(data: StripeCustomerData): Promise<vo
 }
 
 export async function upsertStripeSubscription(data: StripeSubscriptionData): Promise<void> {
-  const { error } = await supabase
+  const { error } = await db()
     .from('stripe_subscriptions')
     .upsert({ ...data, updated_at: new Date().toISOString() }, { onConflict: 'stripe_subscription_id' });
 
@@ -56,7 +65,7 @@ export async function upsertStripeSubscription(data: StripeSubscriptionData): Pr
 }
 
 export async function insertStripePayment(data: StripePaymentData): Promise<void> {
-  const { error } = await supabase
+  const { error } = await db()
     .from('stripe_payments')
     .insert({ ...data, created_at: new Date().toISOString() });
 
@@ -90,14 +99,14 @@ export async function getBillingOverview(): Promise<BillingOverview> {
     { count: totalCustomers, error: e2 },
     { data: payments, error: e3 },
   ] = await Promise.all([
-    supabase
+    db()
       .from('stripe_subscriptions')
       .select('*', { count: 'exact', head: true })
       .eq('status', 'active'),
-    supabase
+    db()
       .from('stripe_customers')
       .select('*', { count: 'exact', head: true }),
-    supabase
+    db()
       .from('stripe_payments')
       .select('stripe_customer_id, amount, currency, status, created_at')
       .eq('status', 'succeeded')
@@ -126,12 +135,12 @@ export async function getCustomerBilling(identifier: string): Promise<unknown | 
   const isCustomerId = identifier.startsWith('cus_');
 
   const { data: customer, error } = isCustomerId
-    ? await supabase
+    ? await db()
         .from('stripe_customers')
         .select('*')
         .eq('stripe_customer_id', identifier)
         .single()
-    : await supabase
+    : await db()
         .from('stripe_customers')
         .select('*')
         .eq('email', identifier)
@@ -140,12 +149,12 @@ export async function getCustomerBilling(identifier: string): Promise<unknown | 
   if (error || !customer) return null;
 
   const [{ data: subs }, { data: payments }] = await Promise.all([
-    supabase
+    db()
       .from('stripe_subscriptions')
       .select('*')
       .eq('stripe_customer_id', customer.stripe_customer_id)
       .order('created_at', { ascending: false }),
-    supabase
+    db()
       .from('stripe_payments')
       .select('*')
       .eq('stripe_customer_id', customer.stripe_customer_id)
@@ -157,7 +166,7 @@ export async function getCustomerBilling(identifier: string): Promise<unknown | 
 }
 
 export async function listSubscriptions(status?: string): Promise<unknown[]> {
-  let query = supabase
+  let query = db()
     .from('stripe_subscriptions')
     .select('stripe_subscription_id, stripe_customer_id, stripe_price_id, status, current_period_end, cancel_at_period_end, user_id, created_at')
     .order('created_at', { ascending: false })

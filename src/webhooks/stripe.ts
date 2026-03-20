@@ -9,7 +9,7 @@ import {
 } from '../services/supabaseBilling.js';
 import { broadcastBillingEvent } from './events-bus.js';
 
-const stripe = new Stripe(config.stripe.secretKey);
+const stripe = new Stripe(config.stripe.secretKey, { apiVersion: '2022-11-15' });
 
 const router: Router = express.Router();
 
