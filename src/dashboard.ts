@@ -3,7 +3,11 @@ export function dashboardHTML(n8nUrl: string): string {
 <html lang="en">
 <head>
   <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
+  <meta name="apple-mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+  <meta name="apple-mobile-web-app-title" content="MCP Hub" />
+  <meta name="theme-color" content="#0a0a0f" />
   <title>MCP Automation Hub</title>
   <style>
     *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
@@ -29,6 +33,8 @@ export function dashboardHTML(n8nUrl: string): string {
       font-size: 13px;
       line-height: 1.6;
       min-height: 100vh;
+      padding-top: env(safe-area-inset-top);
+      padding-bottom: env(safe-area-inset-bottom);
     }
 
     /* ── Layout ── */
