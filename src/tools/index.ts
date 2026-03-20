@@ -4,8 +4,11 @@ import {
   ListToolsRequestSchema,
 } from '@modelcontextprotocol/sdk/types.js';
 import { getHealthStatus } from './health-check.js';
+import { BILLING_TOOL_DEFINITIONS, handleBillingTool } from './billing.js';
 import { config } from '../config.js';
 import { logger } from '../utils/logger.js';
+
+const BILLING_TOOL_NAMES = new Set(BILLING_TOOL_DEFINITIONS.map(t => t.name));
 
 export function registerTools(server: Server): void {
   // List all available tools
@@ -39,24 +42,26 @@ export function registerTools(server: Server): void {
           required: [],
         },
       },
+      ...BILLING_TOOL_DEFINITIONS,
     ],
   }));
 
   // Handle tool calls
   server.setRequestHandler(CallToolRequestSchema, async (request) => {
-    const { name } = request.params;
+    const { name, arguments: args = {} } = request.params;
     logger.debug(`Tool called: ${name}`);
+
+    // Delegate billing tools to their own handler
+    if (BILLING_TOOL_NAMES.has(name)) {
+      const text = await handleBillingTool(name, args as Record<string, unknown>);
+      return { content: [{ type: 'text', text }] };
+    }
 
     switch (name) {
       case 'health_check': {
         const health = getHealthStatus();
         return {
-          content: [
-            {
-              type: 'text',
-              text: JSON.stringify(health, null, 2),
-            },
-          ],
+          content: [{ type: 'text', text: JSON.stringify(health, null, 2) }],
         };
       }
 
@@ -84,12 +89,7 @@ export function registerTools(server: Server): void {
       case 'list_configured_services': {
         const health = getHealthStatus();
         return {
-          content: [
-            {
-              type: 'text',
-              text: JSON.stringify(health.services, null, 2),
-            },
-          ],
+          content: [{ type: 'text', text: JSON.stringify(health.services, null, 2) }],
         };
       }
 

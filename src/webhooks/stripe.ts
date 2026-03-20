@@ -7,6 +7,7 @@ import {
   upsertStripeSubscription,
   insertStripePayment,
 } from '../services/supabaseBilling.js';
+import { broadcastBillingEvent } from './events-bus.js';
 
 const stripe = new Stripe(config.stripe.secretKey);
 
@@ -67,13 +68,15 @@ async function handleStripeEvent(event: Stripe.Event): Promise<void> {
         const sub = await stripe.subscriptions.retrieve(session.subscription as string);
         await upsertStripeSubscription(mapSubscription(sub));
       }
-      await notifyN8n('checkout.session.completed', {
-        type: 'checkout.session.completed',
+      const checkoutPayload = {
         user_id: session.metadata?.user_id,
         stripe_customer_id: session.customer,
         stripe_subscription_id: session.subscription,
+        email: session.customer_details?.email,
         status: 'active',
-      });
+      };
+      broadcastBillingEvent('checkout.session.completed', checkoutPayload);
+      await notifyN8n('checkout.session.completed', { type: 'checkout.session.completed', ...checkoutPayload });
       break;
     }
 
@@ -82,18 +85,26 @@ async function handleStripeEvent(event: Stripe.Event): Promise<void> {
       const sub = event.data.object as Stripe.Subscription;
       await upsertStripeCustomer({ stripe_customer_id: sub.customer as string });
       await upsertStripeSubscription(mapSubscription(sub));
-      await notifyN8n(event.type, {
-        type: event.type,
+      const subPayload = {
         stripe_customer_id: sub.customer,
         stripe_subscription_id: sub.id,
+        stripe_price_id: sub.items.data[0]?.price?.id,
         status: sub.status,
-      });
+        cancel_at_period_end: sub.cancel_at_period_end,
+      };
+      broadcastBillingEvent(event.type, subPayload);
+      await notifyN8n(event.type, { type: event.type, ...subPayload });
       break;
     }
 
     case 'customer.subscription.deleted': {
       const sub = event.data.object as Stripe.Subscription;
       await upsertStripeSubscription({ ...mapSubscription(sub), status: 'canceled' });
+      broadcastBillingEvent('customer.subscription.deleted', {
+        stripe_customer_id: sub.customer,
+        stripe_subscription_id: sub.id,
+        status: 'canceled',
+      });
       break;
     }
 
@@ -106,6 +117,12 @@ async function handleStripeEvent(event: Stripe.Event): Promise<void> {
         amount: invoice.amount_paid,
         currency: invoice.currency,
         status: 'succeeded',
+      });
+      broadcastBillingEvent('invoice.payment_succeeded', {
+        stripe_customer_id: invoice.customer,
+        stripe_invoice_id: invoice.id,
+        amount_paid: invoice.amount_paid,
+        currency: invoice.currency,
       });
       break;
     }
@@ -120,13 +137,14 @@ async function handleStripeEvent(event: Stripe.Event): Promise<void> {
         currency: invoice.currency,
         status: 'failed',
       });
-      await notifyN8n('invoice.payment_failed', {
-        type: 'invoice.payment_failed',
+      const failedPayload = {
         stripe_customer_id: invoice.customer,
         stripe_invoice_id: invoice.id,
         amount_due: invoice.amount_due,
         currency: invoice.currency,
-      });
+      };
+      broadcastBillingEvent('invoice.payment_failed', failedPayload);
+      await notifyN8n('invoice.payment_failed', { type: 'invoice.payment_failed', ...failedPayload });
       break;
     }
 
