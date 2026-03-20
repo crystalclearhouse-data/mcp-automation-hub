@@ -54,3 +54,7 @@ export const config = {
     authToken: process.env.NGROK_AUTH_TOKEN || '',
   },
 } as const;
+
+// Convenience exports for Anthropic SDK consumers
+export const anthropicApiKey = config.anthropic.apiKey;
+export const anthropicModel = config.anthropic.model;

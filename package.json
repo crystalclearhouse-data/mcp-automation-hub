@@ -18,6 +18,7 @@
     "stripe:trigger:sub": "stripe trigger customer.subscription.updated"
   },
   "dependencies": {
+    "@anthropic-ai/sdk": "^0.80.0",
     "@modelcontextprotocol/sdk": "^1.0.0",
     "@supabase/supabase-js": "^2.99.3",
     "@types/express": "^4.17.25",
