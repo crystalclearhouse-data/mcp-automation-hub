@@ -34,8 +34,8 @@ export function getHealthStatus(): HealthStatus {
 
   const services = {
     n8n: {
-      configured: Boolean(config.n8n.host && config.n8n.port),
-      url: `${config.n8n.protocol}://${config.n8n.host}:${config.n8n.port}`,
+      configured: Boolean(config.n8n.apiKey),
+      url: config.n8n.baseUrl,
     },
     supabase: { configured: Boolean(config.supabase.url && config.supabase.anonKey) },
     anthropic: { configured: Boolean(config.anthropic.apiKey) },

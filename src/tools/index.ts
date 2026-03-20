@@ -7,6 +7,16 @@ import { getHealthStatus } from './health-check.js';
 import { BILLING_TOOL_DEFINITIONS, handleBillingTool } from './billing.js';
 import { config } from '../config.js';
 import { logger } from '../utils/logger.js';
+import {
+  listWorkflows,
+  getWorkflow,
+  activateWorkflow,
+  deactivateWorkflow,
+  triggerWebhookWorkflow,
+  listExecutions,
+  getExecution,
+  pingN8n,
+} from '../services/n8n.js';
 
 const BILLING_TOOL_NAMES = new Set(BILLING_TOOL_DEFINITIONS.map(t => t.name));
 
@@ -42,6 +52,85 @@ export function registerTools(server: Server): void {
           required: [],
         },
       },
+      // ── n8n tools ─────────────────────────────────────────────────────────
+      {
+        name: 'n8n_ping',
+        description: 'Ping the n8n cloud instance to verify API connectivity.',
+        inputSchema: { type: 'object', properties: {}, required: [] },
+      },
+      {
+        name: 'n8n_list_workflows',
+        description: 'List all workflows in the n8n cloud instance.',
+        inputSchema: { type: 'object', properties: {}, required: [] },
+      },
+      {
+        name: 'n8n_get_workflow',
+        description: 'Get details of a specific n8n workflow by ID.',
+        inputSchema: {
+          type: 'object',
+          properties: {
+            workflow_id: { type: 'string', description: 'The n8n workflow ID' },
+          },
+          required: ['workflow_id'],
+        },
+      },
+      {
+        name: 'n8n_activate_workflow',
+        description: 'Activate (enable) an n8n workflow by ID.',
+        inputSchema: {
+          type: 'object',
+          properties: {
+            workflow_id: { type: 'string', description: 'The n8n workflow ID' },
+          },
+          required: ['workflow_id'],
+        },
+      },
+      {
+        name: 'n8n_deactivate_workflow',
+        description: 'Deactivate (disable) an n8n workflow by ID.',
+        inputSchema: {
+          type: 'object',
+          properties: {
+            workflow_id: { type: 'string', description: 'The n8n workflow ID' },
+          },
+          required: ['workflow_id'],
+        },
+      },
+      {
+        name: 'n8n_trigger_webhook',
+        description: 'Trigger an n8n workflow via its webhook URL. Use the webhook path (e.g. "my-workflow") and optional JSON payload.',
+        inputSchema: {
+          type: 'object',
+          properties: {
+            webhook_path: { type: 'string', description: 'Webhook path segment after /webhook/' },
+            payload: { type: 'object', description: 'Optional JSON payload to send', additionalProperties: true },
+          },
+          required: ['webhook_path'],
+        },
+      },
+      {
+        name: 'n8n_list_executions',
+        description: 'List recent n8n workflow executions. Optionally filter by workflow ID.',
+        inputSchema: {
+          type: 'object',
+          properties: {
+            workflow_id: { type: 'string', description: 'Filter by workflow ID (optional)' },
+            limit: { type: 'number', description: 'Max results (default 20)' },
+          },
+          required: [],
+        },
+      },
+      {
+        name: 'n8n_get_execution',
+        description: 'Get details of a specific n8n execution by ID.',
+        inputSchema: {
+          type: 'object',
+          properties: {
+            execution_id: { type: 'string', description: 'The execution ID' },
+          },
+          required: ['execution_id'],
+        },
+      },
       ...BILLING_TOOL_DEFINITIONS,
     ],
   }));
@@ -66,17 +155,18 @@ export function registerTools(server: Server): void {
       }
 
       case 'get_n8n_status': {
-        const n8nUrl = `${config.n8n.protocol}://${config.n8n.host}:${config.n8n.port}`;
+        const result = await pingN8n();
         return {
           content: [
             {
               type: 'text',
               text: JSON.stringify(
                 {
-                  configured: Boolean(config.n8n.host),
-                  url: n8nUrl,
-                  webhookUrl: config.n8n.webhookUrl,
-                  note: 'Use this URL to access n8n and trigger workflows.',
+                  configured: Boolean(config.n8n.apiKey),
+                  url: config.n8n.baseUrl,
+                  webhookBaseUrl: config.n8n.webhookBaseUrl,
+                  connected: result.ok,
+                  error: result.error,
                 },
                 null,
                 2
@@ -91,6 +181,53 @@ export function registerTools(server: Server): void {
         return {
           content: [{ type: 'text', text: JSON.stringify(health.services, null, 2) }],
         };
+      }
+
+      // ── n8n handlers ───────────────────────────────────────────────────────
+      case 'n8n_ping': {
+        const result = await pingN8n();
+        return { content: [{ type: 'text', text: JSON.stringify(result, null, 2) }] };
+      }
+
+      case 'n8n_list_workflows': {
+        const workflows = await listWorkflows();
+        return { content: [{ type: 'text', text: JSON.stringify(workflows, null, 2) }] };
+      }
+
+      case 'n8n_get_workflow': {
+        const workflow = await getWorkflow(args['workflow_id'] as string);
+        return { content: [{ type: 'text', text: JSON.stringify(workflow, null, 2) }] };
+      }
+
+      case 'n8n_activate_workflow': {
+        const workflow = await activateWorkflow(args['workflow_id'] as string);
+        return { content: [{ type: 'text', text: JSON.stringify(workflow, null, 2) }] };
+      }
+
+      case 'n8n_deactivate_workflow': {
+        const workflow = await deactivateWorkflow(args['workflow_id'] as string);
+        return { content: [{ type: 'text', text: JSON.stringify(workflow, null, 2) }] };
+      }
+
+      case 'n8n_trigger_webhook': {
+        const result = await triggerWebhookWorkflow(
+          args['webhook_path'] as string,
+          (args['payload'] as Record<string, unknown>) ?? {}
+        );
+        return { content: [{ type: 'text', text: JSON.stringify(result, null, 2) }] };
+      }
+
+      case 'n8n_list_executions': {
+        const executions = await listExecutions(
+          args['workflow_id'] as string | undefined,
+          (args['limit'] as number) ?? 20
+        );
+        return { content: [{ type: 'text', text: JSON.stringify(executions, null, 2) }] };
+      }
+
+      case 'n8n_get_execution': {
+        const execution = await getExecution(args['execution_id'] as string);
+        return { content: [{ type: 'text', text: JSON.stringify(execution, null, 2) }] };
       }
 
       default:
