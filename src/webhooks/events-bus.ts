@@ -58,3 +58,27 @@ export function broadcastBillingEvent(
 export function getSSEClientCount(): number {
   return clients.size;
 }
+
+export function broadcastSSEEvent(
+  eventName: string,
+  data: Record<string, unknown>
+): void {
+  if (clients.size === 0) return;
+
+  const payload = `event: ${eventName}\ndata: ${JSON.stringify({
+    timestamp: new Date().toISOString(),
+    ...data,
+  })}\n\n`;
+
+  const dead: string[] = [];
+  for (const [id, client] of clients) {
+    try {
+      client.res.write(payload);
+    } catch {
+      dead.push(id);
+    }
+  }
+  dead.forEach(id => clients.delete(id));
+
+  logger.debug(`SSE broadcast: ${eventName} → ${clients.size} client(s)`);
+}

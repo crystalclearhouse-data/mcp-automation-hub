@@ -4,7 +4,14 @@ import {
   getBillingOverview,
   getCustomerBilling,
   listSubscriptions,
+  getChurnRisk,
+  getRevenueByDay,
+  getTopCustomers,
 } from '../services/supabaseBilling.js';
+import {
+  generateStripePaymentLink,
+  calculateMRR,
+} from '../services/revenueEngine.js';
 import { getSSEClientCount } from '../webhooks/events-bus.js';
 
 export const BILLING_TOOL_DEFINITIONS = [

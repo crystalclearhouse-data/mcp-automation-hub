@@ -1,5 +1,7 @@
 import express from 'express';
+import path from 'path';
 import stripeWebhookRouter from './webhooks/stripe.js';
+import twilioWebhookRouter from './webhooks/twilio.js';
 import { addSSEClient, removeSSEClient } from './webhooks/events-bus.js';
 import { config } from './config.js';
 import { logger } from './utils/logger.js';
@@ -16,9 +18,16 @@ import {
 export function startHttpServer(): void {
   const app = express();
 
+  // Serve static files from public/ (manifest.json, sw.js, icons, etc.)
+  // __dirname in CommonJS = dist/  →  ../public = project root /public
+  app.use(express.static(path.join(__dirname, '..', 'public')));
+
   // Stripe webhook route MUST be mounted before express.json() so it
   // can read the raw request body required for signature verification.
   app.use('/webhooks', stripeWebhookRouter);
+
+  // Twilio sends form-encoded bodies; mount before the JSON parser but after Stripe
+  app.use('/webhooks/twilio', express.urlencoded({ extended: false }), twilioWebhookRouter);
 
   // JSON body parser for all other routes
   app.use(express.json());
@@ -96,6 +105,20 @@ export function startHttpServer(): void {
     catch (e) { res.status(500).json({ error: String(e) }); }
   });
 
+  // ── POST /api/push/notify — Server-side push payload trigger ─────────────
+  app.post('/api/push/notify', (req, res) => {
+    const { title, body } = req.body as { title?: string; body?: string };
+    if (!body) {
+      res.status(400).json({ error: 'body is required' });
+      return;
+    }
+    // Accepts push notification payloads. Integrate with a Web Push library
+    // (e.g. web-push) and stored PushSubscription objects to deliver real
+    // push messages to clients.
+    logger.info(`Push notify requested — title: ${title ?? 'MCP Hub'}, body: ${body}`);
+    res.json({ ok: true, message: 'Push notification queued', title: title ?? 'MCP Hub', body });
+  });
+
   app.listen(config.port, () => {
     logger.info(`HTTP server listening on port ${config.port}`);
     logger.info(`  GET  /                 — Dashboard UI`);
@@ -103,5 +126,7 @@ export function startHttpServer(): void {
     logger.info(`  GET  /events           — Live billing event stream (SSE)`);
     logger.info(`  GET  /health           — Health check`);
     logger.info(`  GET  /api/n8n/*        — n8n REST API`);
+    logger.info(`  POST /api/push/notify  — Push notification trigger`);
+    logger.info(`  POST /webhooks/twilio/sms — Twilio inbound SMS receiver`);
   });
 }
