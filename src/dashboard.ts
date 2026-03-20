@@ -9,6 +9,8 @@ export function dashboardHTML(n8nUrl: string): string {
   <meta name="apple-mobile-web-app-title" content="MCP Hub" />
   <meta name="theme-color" content="#0a0a0f" />
   <title>MCP Automation Hub</title>
+  <link rel="manifest" href="/manifest.json">
+  <link rel="apple-touch-icon" href="/icons/icon-192.png">
   <style>
     *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
 
@@ -354,6 +356,21 @@ export function dashboardHTML(n8nUrl: string): string {
     textarea { resize: vertical; min-height: 60px; }
     input::placeholder, textarea::placeholder { color: var(--muted); }
 
+    /* ── PWA buttons ── */
+    .pwa-btn {
+      font-family: inherit;
+      font-size: 11px;
+      padding: 4px 10px;
+      border-radius: 5px;
+      border: 1px solid var(--accent);
+      background: rgba(124,106,255,0.12);
+      color: var(--accent);
+      cursor: pointer;
+      transition: all 0.15s;
+      display: none;
+    }
+    .pwa-btn:hover { background: rgba(124,106,255,0.25); }
+
     /* ── Toast ── */
     #toast {
       position: fixed;
@@ -414,6 +431,8 @@ export function dashboardHTML(n8nUrl: string): string {
     MCP Automation Hub
   </div>
   <div style="display:flex;gap:10px;align-items:center;">
+    <button class="pwa-btn" id="notify-btn" onclick="requestNotifyPermission()">🔔 Enable Alerts</button>
+    <button class="pwa-btn" id="install-btn">⬇ Install App</button>
     <div class="status-pill">
       <div class="dot" id="n8n-dot"></div>
       <span id="n8n-label">connecting…</span>
@@ -497,6 +516,39 @@ export function dashboardHTML(n8nUrl: string): string {
 <div id="toast"></div>
 
 <script>
+  // ── PWA: Service Worker registration ──────────────────────────────────────
+  if ('serviceWorker' in navigator) {
+    navigator.serviceWorker.register('/sw.js').catch(() => {});
+  }
+
+  // ── PWA: Install prompt ───────────────────────────────────────────────────
+  let deferredPrompt;
+  window.addEventListener('beforeinstallprompt', e => {
+    e.preventDefault();
+    deferredPrompt = e;
+    document.getElementById('install-btn').style.display = 'block';
+  });
+  document.getElementById('install-btn')?.addEventListener('click', () => {
+    deferredPrompt?.prompt();
+  });
+
+  // ── PWA: Push notification permission ────────────────────────────────────
+  function requestNotifyPermission() {
+    Notification.requestPermission().then(permission => {
+      if (permission === 'granted') {
+        toast('Notifications enabled');
+        document.getElementById('notify-btn').style.display = 'none';
+      } else {
+        toast('Notification permission denied', true);
+      }
+    });
+  }
+
+  // Show notify button if not yet granted
+  if ('Notification' in window && Notification.permission !== 'granted') {
+    document.getElementById('notify-btn').style.display = 'block';
+  }
+
   const N8N_URL = '${n8nUrl}';
   let allWorkflows = [];
   let allExecutions = [];

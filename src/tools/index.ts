@@ -17,6 +17,7 @@ import {
   getExecution,
   pingN8n,
 } from '../services/n8n.js';
+import { sendSMS, makeCall } from '../services/twilio.js';
 
 const BILLING_TOOL_NAMES = new Set(BILLING_TOOL_DEFINITIONS.map(t => t.name));
 
@@ -132,6 +133,47 @@ export function registerTools(server: Server): void {
         },
       },
       ...BILLING_TOOL_DEFINITIONS,
+      // ── Twilio tools ───────────────────────────────────────────────────────
+      {
+        name: 'twilio_send_sms',
+        description: 'Send an SMS message via Twilio to a single recipient.',
+        inputSchema: {
+          type: 'object',
+          properties: {
+            to: { type: 'string', description: 'Recipient phone number in E.164 format (e.g. +15551234567)' },
+            message: { type: 'string', description: 'SMS message body' },
+          },
+          required: ['to', 'message'],
+        },
+      },
+      {
+        name: 'twilio_make_call',
+        description: 'Initiate an outbound phone call via Twilio with a TwiML URL to control call flow.',
+        inputSchema: {
+          type: 'object',
+          properties: {
+            to: { type: 'string', description: 'Recipient phone number in E.164 format' },
+            twiml_url: { type: 'string', description: 'Publicly accessible URL returning TwiML instructions' },
+          },
+          required: ['to', 'twiml_url'],
+        },
+      },
+      {
+        name: 'twilio_sms_blast',
+        description: 'Send the same SMS message to multiple recipients in parallel.',
+        inputSchema: {
+          type: 'object',
+          properties: {
+            numbers: {
+              type: 'array',
+              items: { type: 'string' },
+              description: 'Array of recipient phone numbers in E.164 format',
+            },
+            message: { type: 'string', description: 'SMS message body to send to all recipients' },
+          },
+          required: ['numbers', 'message'],
+        },
+      },
     ],
   }));
 
@@ -228,6 +270,33 @@ export function registerTools(server: Server): void {
       case 'n8n_get_execution': {
         const execution = await getExecution(args['execution_id'] as string);
         return { content: [{ type: 'text', text: JSON.stringify(execution, null, 2) }] };
+      }
+
+      // ── Twilio handlers ────────────────────────────────────────────────────
+      case 'twilio_send_sms': {
+        const result = await sendSMS(args['to'] as string, args['message'] as string);
+        return { content: [{ type: 'text', text: JSON.stringify(result, null, 2) }] };
+      }
+
+      case 'twilio_make_call': {
+        const result = await makeCall(args['to'] as string, args['twiml_url'] as string);
+        return { content: [{ type: 'text', text: JSON.stringify(result, null, 2) }] };
+      }
+
+      case 'twilio_sms_blast': {
+        const numbers = args['numbers'] as string[];
+        const message = args['message'] as string;
+        const results = await Promise.all(
+          numbers.map(async (to) => {
+            try {
+              const res = await sendSMS(to, message);
+              return { to, success: true, sid: res.sid };
+            } catch (err: unknown) {
+              return { to, success: false, error: err instanceof Error ? err.message : String(err) };
+            }
+          })
+        );
+        return { content: [{ type: 'text', text: JSON.stringify(results, null, 2) }] };
       }
 
       default:
