@@ -3,6 +3,15 @@ import stripeWebhookRouter from './webhooks/stripe.js';
 import { addSSEClient, removeSSEClient } from './webhooks/events-bus.js';
 import { config } from './config.js';
 import { logger } from './utils/logger.js';
+import { dashboardHTML } from './dashboard.js';
+import {
+  pingN8n,
+  listWorkflows,
+  activateWorkflow,
+  deactivateWorkflow,
+  triggerWebhookWorkflow,
+  listExecutions,
+} from './services/n8n.js';
 
 export function startHttpServer(): void {
   const app = express();
@@ -46,10 +55,53 @@ export function startHttpServer(): void {
     res.json({ status: 'ok', uptime: process.uptime(), port: config.port });
   });
 
+  // ── GET / — Dashboard UI ─────────────────────────────────────────────────
+  app.get('/', (_req, res) => {
+    res.setHeader('Content-Type', 'text/html; charset=utf-8');
+    res.send(dashboardHTML(config.n8n.baseUrl));
+  });
+
+  // ── n8n REST API (used by dashboard) ─────────────────────────────────────
+  app.get('/api/n8n/ping', async (_req, res) => {
+    try { res.json(await pingN8n()); }
+    catch (e) { res.status(500).json({ ok: false, error: String(e) }); }
+  });
+
+  app.get('/api/n8n/workflows', async (_req, res) => {
+    try { res.json(await listWorkflows()); }
+    catch (e) { res.status(500).json({ error: String(e) }); }
+  });
+
+  app.post('/api/n8n/workflows/:id/activate', async (req, res) => {
+    try { res.json(await activateWorkflow(req.params.id)); }
+    catch (e) { res.status(500).json({ error: String(e) }); }
+  });
+
+  app.post('/api/n8n/workflows/:id/deactivate', async (req, res) => {
+    try { res.json(await deactivateWorkflow(req.params.id)); }
+    catch (e) { res.status(500).json({ error: String(e) }); }
+  });
+
+  app.post('/api/n8n/trigger', async (req, res) => {
+    const { webhookPath, payload = {} } = req.body as { webhookPath: string; payload: Record<string, unknown> };
+    if (!webhookPath) { res.status(400).json({ error: 'webhookPath required' }); return; }
+    try { res.json(await triggerWebhookWorkflow(webhookPath, payload)); }
+    catch (e) { res.status(500).json({ error: String(e) }); }
+  });
+
+  app.get('/api/n8n/executions', async (req, res) => {
+    const limit = parseInt(String(req.query['limit'] ?? '20'), 10);
+    const workflowId = req.query['workflowId'] as string | undefined;
+    try { res.json(await listExecutions(workflowId, limit)); }
+    catch (e) { res.status(500).json({ error: String(e) }); }
+  });
+
   app.listen(config.port, () => {
     logger.info(`HTTP server listening on port ${config.port}`);
+    logger.info(`  GET  /                 — Dashboard UI`);
     logger.info(`  POST /webhooks/stripe  — Stripe event receiver`);
     logger.info(`  GET  /events           — Live billing event stream (SSE)`);
     logger.info(`  GET  /health           — Health check`);
+    logger.info(`  GET  /api/n8n/*        — n8n REST API`);
   });
 }
