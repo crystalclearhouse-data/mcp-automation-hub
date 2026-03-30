@@ -1,0 +1,28 @@
+{
+  "name": "@crystalclearhouse/mcp-browser-bridge",
+  "version": "1.0.0",
+  "description": "Universal agent-callable frontend layer",
+  "type": "module",
+  "main": "dist/browser-bridge.js",
+  "bin": {
+    "cch-browser-bridge": "dist/browser-bridge.js"
+  },
+  "scripts": {
+    "build": "tsc",
+    "start": "node dist/browser-bridge.js",
+    "dev": "tsx src/browser-bridge.ts",
+    "install-browsers": "playwright install chromium"
+  },
+  "dependencies": {
+    "@modelcontextprotocol/sdk": "^1.0.0",
+    "playwright": "^1.43.0"
+  },
+  "devDependencies": {
+    "@types/node": "^20.0.0",
+    "tsx": "^4.0.0",
+    "typescript": "^5.0.0"
+  },
+  "engines": {
+    "node": ">=18.0.0"
+  }
+}
