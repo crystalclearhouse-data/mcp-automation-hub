@@ -177,8 +177,8 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
         const waitUntil = (a.wait_for as 'load' | 'domcontentloaded' | 'networkidle') ?? 'load'
         await page.goto(a.url as string, { waitUntil })
         const title = await page.title()
-        return result(`Navigated to: ${a.url}
-Page title: ${title}`)
+        return result('Navigated to: ' + String(a.url) + '
+Page title: ' + String(title))
       }
 
       // -- CLICK ----------------------------------------------------------------
@@ -192,7 +192,7 @@ Page title: ${title}`)
         } catch {
           await page.getByText(selector).first().click()
         }
-        return result(`Clicked: ${selector}`)
+        return result('Clicked: ' + String(selector))
       }
 
       // -- FILL -----------------------------------------------------------------
@@ -202,7 +202,7 @@ Page title: ${title}`)
           await page.fill(a.selector as string, '')
         }
         await page.fill(a.selector as string, a.value as string)
-        return result(`Filled "${a.selector}" with ${(a.value as string).length} chars`)
+        return result('Filled "' + String(a.selector) + '" with ' + String((a.value as string).length) + ' chars')
       }
 
       // -- READ -----------------------------------------------------------------
@@ -251,7 +251,7 @@ Page title: ${title}`)
       case 'browser_execute_js': {
         const page = await getPage(a.brand as Brand, a.platform as Platform)
         const scriptResult = await page.evaluate(a.script as string)
-        return result(`JS result: ${JSON.stringify(scriptResult)}`)
+        return result('JS result: ' + String(JSON.stringify(scriptResult)))
       }
 
       // -- POST CONTENT ---------------------------------------------------------
@@ -268,20 +268,20 @@ Page title: ${title}`)
         const validation = brandRouter.validate(req)
 
         if (!validation.allowed) {
-          return result(`BLOCKED: ${validation.reason}`, true)
+          return result('BLOCKED: ' + String(validation.reason), true)
         }
 
         // HITL gate -- must be explicitly approved
         if (validation.hitlRequired && !a.hitl_approved) {
           return result(
-            `HITL REQUIRED: This action requires human approval before executing.
-` +
-            `Brand: ${a.brand} | Platform: ${a.platform}
-` +
-            `Content preview: ${(a.content as string).slice(0, 100)}...
+            'HITL REQUIRED: This action requires human approval before executing.
+' +
+            'Brand: ' + String(a.brand) + ' | Platform: ' + String(a.platform) + '
+' +
+            'Content preview: ' + String((a.content as string).slice(0, 100)) + '...
 
-` +
-            `To approve: log this to Supabase hitl_logs, get approval, then re-call with hitl_approved=true and hitl_log_id set.`,
+' +
+            'To approve: log this to Supabase hitl_logs, get approval, then re-call with hitl_approved=true and hitl_log_id set.',
             false
           )
         }
@@ -308,10 +308,10 @@ Page title: ${title}`)
           return result('No saved sessions found. Agents will need to log in first.')
         }
 
-        const lines = filtered.map(s => `  ok ${s.brand}::${s.platform}`)
-        return result(`Saved sessions (${filtered.length}):
-${lines.join('
-')}`)
+        const lines = filtered.map(s => '  ok ' + String(s.brand) + '::' + String(s.platform))
+        return result('Saved sessions (' + String(filtered.length) + '):
+' + String(lines.join('
+')))
       }
 
       // -- SESSION CLEAR ---------------------------------------------------------
@@ -320,15 +320,15 @@ ${lines.join('
           brand: a.brand as Brand,
           platform: a.platform as Platform,
         })
-        return result(`Cleared session: ${a.brand}::${a.platform}`)
+        return result('Cleared session: ' + String(a.brand) + '::' + String(a.platform))
       }
 
       default:
-        return result(`Unknown tool: ${name}`, true)
+        return result('Unknown tool: ' + String(name), true)
     }
   } catch (err: unknown) {
     const msg = err instanceof Error ? err.message : String(err)
-    return result(`Error: ${msg}`, true)
+    return result('Error: ' + String(msg), true)
   }
 })
 
@@ -338,7 +338,7 @@ ${lines.join('
 const activePages: Map<string, Page> = new Map()
 
 async function getPage (brand: Brand = 'crystalclear', platform: Platform = 'generic'): Promise<Page> {
-  const key = `${brand}::${platform}`
+  const key = String(brand) + '::' + String(platform)
   const existing = activePages.get(key)
   if (existing && !existing.isClosed()) return existing
 
@@ -364,27 +364,27 @@ async function postToplatform (
       await page.waitForTimeout(1000)
       await page.click('[data-testid="tweetButton"]')
       await page.waitForTimeout(2000)
-      return `Posted to X (Twitter): "${content.slice(0, 50)}..."`
+      return 'Posted to X (Twitter): "' + String(content.slice(0, 50)) + '..."'
     }
 
     case 'instagram': {
       // Instagram web posting is complex -- navigate to creator studio
       await page.goto('https://www.instagram.com', { waitUntil: 'networkidle' })
-      return `Instagram: Navigate to post composer manually or use the mobile API. Content queued: "${content.slice(0, 50)}..."`
+      return 'Instagram: Navigate to post composer manually or use the mobile API. Content queued: "' + String(content.slice(0, 50)) + '..."'
     }
 
     case 'tiktok': {
       await page.goto('https://www.tiktok.com/creator-center/upload', { waitUntil: 'networkidle' })
-      return `TikTok: Upload page opened. Media upload required for TikTok posts. Content caption queued: "${content.slice(0, 50)}..."`
+      return 'TikTok: Upload page opened. Media upload required for TikTok posts. Content caption queued: "' + String(content.slice(0, 50)) + '..."'
     }
 
     case 'onlyfans': {
       await page.goto('https://onlyfans.com', { waitUntil: 'networkidle' })
-      return `OnlyFans: Home loaded. Manual post creation required via UI. Content queued: "${content.slice(0, 50)}..."`
+      return 'OnlyFans: Home loaded. Manual post creation required via UI. Content queued: "' + String(content.slice(0, 50)) + '..."'
     }
 
     default:
-      return `Generic: No platform-specific posting logic for '${platform}'. Use browser_navigate + browser_click + browser_fill sequence instead.`
+      return "Generic: No platform-specific posting logic for '" + String(platform) + "'. Use browser_navigate + browser_click + browser_fill sequence instead."
   }
 }
 
